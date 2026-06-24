@@ -7,8 +7,8 @@ requireLogin();
 $summary_sql = "
     SELECT
         COUNT(products_ID)              AS total_products,
-        SUM(product_Stocks)              AS total_stock,
-        SUM(product_Stocks * product_Price) AS total_value
+        SUM(product_Stock)              AS total_stock,
+        SUM(product_Stock * product_Price) AS total_value
     FROM products";
 $summary = $conn->query($summary_sql)->fetch_assoc();
 
@@ -16,11 +16,11 @@ $category_sql = "
     SELECT
         c.category_Name                                    AS category_name,
         COUNT(p.products_ID)                               AS products_count,
-        IFNULL(SUM(p.product_Stocks), 0)                    AS total_stock,
-        IFNULL(SUM(p.product_Price * p.product_Stocks), 0)  AS total_value,
+        IFNULL(SUM(p.product_Stock), 0)                    AS total_stock,
+        IFNULL(SUM(p.product_Price * p.product_Stock), 0)  AS total_value,
         IFNULL(AVG(p.product_Price), 0)                    AS avg_price
-    FROM categories c
-    LEFT JOIN products p ON c.category_ID = p.category_id
+    FROM category c
+    LEFT JOIN products p ON c.category_ID = p.category_ID
     GROUP BY c.category_ID, c.category_Name
     ORDER BY total_value DESC";
 $category_report = $conn->query($category_sql);
@@ -29,10 +29,10 @@ $supplier_sql = "
     SELECT
         s.supplier_Name                 AS supplier_name,
         COUNT(p.products_ID)            AS products_count,
-        IFNULL(SUM(p.product_Stocks), 0) AS total_stock
+        IFNULL(SUM(p.product_Stock), 0) AS total_stock
     FROM suppliers s
-    LEFT JOIN products p ON s.supplier_ID = p.supplier_ID
-    GROUP BY s.supplier_ID, s.supplier_Name
+    LEFT JOIN products p ON s.suppliers_ID = p.suppliers_ID
+    GROUP BY s.suppliers_ID, s.supplier_Name
     ORDER BY total_stock DESC";
 $supplier_report = $conn->query($supplier_sql);
 ?>
@@ -47,20 +47,23 @@ $supplier_report = $conn->query($supplier_sql);
 <body>
 
 <nav class="navbar">
-    <a href="index.php" class="navbar-brand">
-    </a>
-    <div class="navbar-links">
-        <a href="index.php"  class="nav-link">Products</a>
-        <a href="report.php" class="nav-link active">View Report</a>
-        <a href="add.php"    class="nav-link btn">+ Add Product</a>
-        <span class="user-badge">
-            <span class="user-icon">&#128100;</span>
-            <?= htmlspecialchars(getUsername()) ?>
-            <span class="role-tag role-<?= htmlspecialchars(getRole()) ?>"><?= htmlspecialchars(ucfirst(getRole())) ?></span>
-        </span>
-        <a href="logout.php" class="nav-link">Logout</a>
-    </div>
-</nav>
+        <a href="index.php" class="navbar-brand">
+        </a>
+        <div class="navbar-links">
+            <a href="index.php" class="nav-link active">Products</a>
+            <a href="report.php" class="nav-link">View Report</a>
+            <?php if (isAdmin()): ?>
+            <a href="add.php" class="nav-link btn">+ Add Product</a>
+            <a href="users.php" class="nav-link">Manage Staff</a>
+            <?php endif; ?>
+            <span class="user-badge">
+                <span class="user-icon">&#128100;</span>
+                <?= htmlspecialchars(getUsername()) ?>
+                <span class="role-tag role-<?= htmlspecialchars(getRole()) ?>"><?= htmlspecialchars(ucfirst(getRole())) ?></span>
+            </span>
+            <a href="logout.php" class="nav-link">Logout</a>
+        </div>
+    </nav>
 
 <div class="container">
 

@@ -13,16 +13,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $Price       = (double)($_POST['product_Price']  ?? 0);
     $Stock       = (int)($_POST['product_Stock']     ?? 0);
     $Category    = (int)($_POST['category_ID']       ?? 0);
-    $Suppliers   = (int)($_POST['supplier_ID']       ?? 0);
+    $Suppliers   = (int)($_POST['suppliers_ID']       ?? 0);
 
-    if (empty($Name) || empty($Description) || $Price <= 0 || $Stock < 0 || empty($Category) || empty($Suppliers)) {
+    if ($Name === '' || $Description === '' || $Price <= 0 || $Stock < 0 || $Category <= 0 || $Suppliers <= 0) {
 
         $message = '<p style="color:red;">All fields are required.</p>';
 
     } else {
 
         $stmt = $conn->prepare(
-            "INSERT INTO products (product_Name, product_Description, product_Price, product_Stocks, category_ID, supplier_ID)
+            "INSERT INTO products (products_name, products_Description, product_Price, product_Stock, category_ID, suppliers_ID)
              VALUES (?, ?, ?, ?, ?, ?)"
         );
         $stmt->bind_param("ssdiii", $Name, $Description, $Price, $Stock, $Category, $Suppliers);
@@ -38,8 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$categories = $conn->query("SELECT category_ID, category_Name FROM categories ORDER BY category_Name");
-$suppliers  = $conn->query("SELECT supplier_ID, supplier_Name FROM suppliers ORDER BY supplier_Name");
+$categories = $conn->query("SELECT category_ID, category_Name FROM category ORDER BY category_Name");
+$suppliers  = $conn->query("SELECT suppliers_ID, supplier_Name FROM suppliers ORDER BY supplier_Name");
 ?>
 <!DOCTYPE html>
 <html>
@@ -89,7 +89,7 @@ $suppliers  = $conn->query("SELECT supplier_ID, supplier_Name FROM suppliers ORD
             min="0"
             required
             placeholder="Stock"
-            value="<?= htmlspecialchars($_POST['product_Stocks'] ?? '') ?>">
+            value="<?= htmlspecialchars($_POST['product_Stock'] ?? '') ?>">
 
         <label>Category</label>
         <select name="category_ID" required>
@@ -103,11 +103,11 @@ $suppliers  = $conn->query("SELECT supplier_ID, supplier_Name FROM suppliers ORD
         </select>
 
         <label>Supplier</label>
-        <select name="supplier_ID" required>
+        <select name="suppliers_ID" required>
             <option value="">-- Select Supplier --</option>
             <?php while ($sup = $suppliers->fetch_assoc()): ?>
-                <option value="<?= $sup['supplier_ID'] ?>"
-                    <?= (($_POST['supplier_ID'] ?? '') == $sup['supplier_ID']) ? 'selected' : '' ?>>
+                <option value="<?= $sup['suppliers_ID'] ?>"
+                    <?= (($_POST['suppliers_ID'] ?? '') == $sup['suppliers_ID']) ? 'selected' : '' ?>>
                     <?= htmlspecialchars($sup['supplier_Name']) ?>
                 </option>
             <?php endwhile; ?>

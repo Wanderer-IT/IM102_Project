@@ -5,62 +5,85 @@ require_once 'auth.php';
 requireLogin();
 
 $search = $_GET['search'] ?? '';
-$category = $_GET['categories'] ?? '';
+$category = $_GET['category'] ?? '';
 
 $sql = "
     SELECT
         p.products_ID,
-        p.product_Name,
-        p.product_Description,
+        p.products_Name,
+        p.products_Description,
         p.product_Price,
-        p.product_Stocks,
+        p.product_Stock,
         c.category_Name,
         s.supplier_Name,
         p.created_At
     FROM products p
-    INNER JOIN categories c  ON p.category_ID  = c.category_ID
-    INNER JOIN suppliers s ON p.supplier_ID = s.supplier_ID
+    INNER JOIN category c  ON p.category_ID  = c.category_ID
+    INNER JOIN suppliers s ON p.suppliers_ID = s.suppliers_ID
     WHERE 1=1";
 
+$params = [];
+$types  = '';
+
 if (!empty($search)) {
-    $sql .= " AND (
-        p.products_name LIKE '%" . $conn->real_escape_string($search) . "%'
-        OR p.products_Description LIKE '%" . $conn->real_escape_string($search) . "%'
-    )";
+    $sql .= " AND (p.products_name LIKE ? OR p.products_Description LIKE ?)";
+    $like = '%' . $search . '%';
+    $params[] = $like;
+    $params[] = $like;
+    $types   .= 'ss';
 }
 
 if (!empty($category)) {
-    $sql .= " AND c.category_Name = '" . $conn->real_escape_string($category) . "'";
+    $sql .= " AND c.category_Name = ?";
+    $params[] = $category;
+    $types   .= 's';
 }
 
 $sql .= " ORDER BY p.products_ID ASC";
-$result = $conn->query($sql);
 
-$categories = $conn->query("SELECT DISTINCT category_Name FROM categories ORDER BY category_Name");
+$stmt = $conn->prepare($sql);
+if ($params) {
+    $stmt->bind_param($types, ...$params);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+
+$categories = $conn->query("SELECT DISTINCT category_Name FROM category ORDER BY category_Name");
 
 $stats_sql = "
     SELECT
         COUNT(*)                                                   AS total,
-        SUM(p.product_Stocks)                                       AS total_stock,
-        SUM(p.product_Price * p.product_Stocks)                     AS total_value,
-        SUM(CASE WHEN p.product_Stocks < 20 THEN 1 ELSE 0 END)     AS low_stock
+        SUM(p.product_Stock)                                       AS total_stock,
+        SUM(p.product_Price * p.product_Stock)                     AS total_value,
+        SUM(CASE WHEN p.product_Stock < 20 THEN 1 ELSE 0 END)     AS low_stock
     FROM products p
-    JOIN categories  c ON p.category_ID  = c.category_ID
-    JOIN suppliers s ON p.supplier_ID = s.supplier_ID
+    JOIN category  c ON p.category_ID  = c.category_ID
+    JOIN suppliers s ON p.suppliers_ID = s.suppliers_ID
     WHERE 1=1";
 
+$stats_params = [];
+$stats_types  = '';
+
 if (!empty($search)) {
-    $stats_sql .= " AND (
-        p.products_name LIKE '%" . $conn->real_escape_string($search) . "%'
-        OR p.products_Description LIKE '%" . $conn->real_escape_string($search) . "%'
-    )";
+    $stats_sql .= " AND (p.products_name LIKE ? OR p.products_Description LIKE ?)";
+    $like = '%' . $search . '%';
+    $stats_params[] = $like;
+    $stats_params[] = $like;
+    $stats_types   .= 'ss';
 }
 
 if (!empty($category)) {
-    $stats_sql .= " AND c.category_Name = '" . $conn->real_escape_string($category) . "'";
+    $stats_sql .= " AND c.category_Name = ?";
+    $stats_params[] = $category;
+    $stats_types   .= 's';
 }
 
-$stats = $conn->query($stats_sql)->fetch_assoc();
+$stats_stmt = $conn->prepare($stats_sql);
+if ($stats_params) {
+    $stats_stmt->bind_param($stats_types, ...$stats_params);
+}
+$stats_stmt->execute();
+$stats = $stats_stmt->get_result()->fetch_assoc();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -79,15 +102,16 @@ $stats = $conn->query($stats_sql)->fetch_assoc();
         </a>
         <div class="navbar-links">
             <a href="index.php" class="nav-link active">Products</a>
+            <a href="report.php" class="nav-link">View Report</a>
             <?php if (isAdmin()): ?>
             <a href="add.php" class="nav-link btn">+ Add Product</a>
+            <a href="users.php" class="nav-link">Manage Staff</a>
             <?php endif; ?>
             <span class="user-badge">
                 <span class="user-icon">&#128100;</span>
                 <?= htmlspecialchars(getUsername()) ?>
                 <span class="role-tag role-<?= htmlspecialchars(getRole()) ?>"><?= htmlspecialchars(ucfirst(getRole())) ?></span>
             </span>
-            <a href="report.php" class="nav-link">View Report</a>
             <a href="logout.php" class="nav-link">Logout</a>
         </div>
     </nav>
@@ -151,11 +175,11 @@ $stats = $conn->query($stats_sql)->fetch_assoc();
                 <tbody>
                     <?php while ($row = $result->fetch_assoc()): ?>
                         <tr>
-                            <td><?= htmlspecialchars($row['product_Name']) ?></td>
-                            <td><?= htmlspecialchars($row['product_Description']) ?></td>
+                            <td><?= htmlspecialchars($row['products_Name']) ?></td>
+                            <td><?= htmlspecialchars($row['products_Description']) ?></td>
                             <td class="price">$<?= number_format($row['product_Price'], 2) ?></td>
-                            <td class="stock <?= $row['product_Stocks'] < 20 ? 'low-stock' : '' ?>">
-                                <?= $row['product_Stocks'] ?>
+                            <td class="stock <?= $row['product_Stock'] < 20 ? 'low-stock' : '' ?>">
+                                <?= $row['product_Stock'] ?>
                             </td>
                             <td><span class="badge"><?= htmlspecialchars($row['category_Name']) ?></span></td>
                             <td><?= htmlspecialchars($row['supplier_Name']) ?></td>

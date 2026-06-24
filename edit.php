@@ -5,8 +5,12 @@ require_once 'auth.php';
 requireAdmin();
 
 $id = (int)($_GET['id'] ?? 0);
-$result = $conn->query("SELECT * FROM products WHERE products_ID = $id");
+$stmt = $conn->prepare("SELECT * FROM products WHERE products_ID = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$result = $stmt->get_result();
 $products = $result->fetch_assoc();
+$stmt->close();
 
 if (!$products) {
     die("Product not found.");
@@ -18,31 +22,35 @@ $suppliers  = $conn->query("SELECT suppliers_ID, supplier_Name FROM suppliers");
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = $conn->real_escape_string($_POST['products_name'] ?? '');
-    $description = $conn->real_escape_string($_POST['products_Description'] ?? '');
+    $name = trim($_POST['products_name'] ?? '');
+    $description = trim($_POST['products_Description'] ?? '');
     $Price = (double)($_POST['product_Price'] ?? 0);
     $Stock = (int)($_POST['product_Stock'] ?? 0);
     $Category = (int)($_POST['category_ID'] ?? 0);
     $Suppliers = (int)($_POST['suppliers_ID'] ?? 0);
     
-    if (empty($name) || empty($description) || empty($Price) || empty($Stock) || empty($Category) || empty($Suppliers)) {
+    if ($name === '' || $description === '' || $Price <= 0 || $Stock < 0 || $Category <= 0 || $Suppliers <= 0) {
         $message = '<p style="color:red;">All fields are required.</p>';
     } else {
-        $sql = "UPDATE products SET 
-                products_name='$name', 
-                products_Description='$description', 
-                product_Price=$Price,
-                product_Stock=$Stock, 
-                category_ID=$Category, 
-                suppliers_ID=$Suppliers
-                WHERE products_ID=$id";
-        
-        if ($conn->query($sql)) {
+        $stmt = $conn->prepare(
+            "UPDATE products SET
+                products_name = ?,
+                products_Description = ?,
+                product_Price = ?,
+                product_Stock = ?,
+                category_ID = ?,
+                suppliers_ID = ?
+             WHERE products_ID = ?"
+        );
+        $stmt->bind_param("ssdiiii", $name, $description, $Price, $Stock, $Category, $Suppliers, $id);
+
+        if ($stmt->execute()) {
             header('Location: index.php');
             exit;
         } else {
-            $message = '<p style="color:red;">Error: ' . $conn->error . '</p>';
+            $message = '<p style="color:red;">Error: ' . $stmt->error . '</p>';
         }
+        $stmt->close();
     }
 }
 

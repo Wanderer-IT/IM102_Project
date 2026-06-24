@@ -8,13 +8,20 @@ requireAdmin();
 $id = (int)($_GET['id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $conn->query("DELETE FROM products WHERE products_ID = $id");
+    $stmt = $conn->prepare("DELETE FROM products WHERE products_ID = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $stmt->close();
     header('Location: index.php');
     exit;
 }
 
-$result = $conn->query("SELECT product_Name, product_Description, product_Price, product_Stocks FROM products WHERE products_ID = $id");
+$stmt = $conn->prepare("SELECT products_name, products_Description, product_Price, product_Stock FROM products WHERE products_ID = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
+$result = $stmt->get_result();
 $product = $result->fetch_assoc();
+$stmt->close();
 
 if (!$product) {
     die("Product not found.");
@@ -31,8 +38,8 @@ if (!$product) {
         <h1>Delete Product</h1>
         
         <p>Are you sure you want to delete:</p>
-        <p class="name"><?= htmlspecialchars($product['product_Name']) ?></p>
-        <p class="details"><?= $product['product_Description'] ?> — Price <?= $product['product_Price'] ?>  — Stocks <?= $product['product_Stocks'] ?></p>
+        <p class="name"><?= htmlspecialchars($product['products_name']) ?></p>
+        <p class="details"><?= htmlspecialchars($product['products_Description']) ?> — Price <?= $product['product_Price'] ?>  — Stocks <?= $product['product_Stock'] ?></p>
         <p class="warning">This action cannot be undone.</p>
         
         <form method="POST" style="display: inline;">
