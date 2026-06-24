@@ -1,0 +1,770 @@
+/* ============================================================
+   style.css — Unified stylesheet for DublinIM102 Inventory System
+   Covers: login, register, index, add, edit, delete, report
+   ============================================================ */
+
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg:           #0b1220;
+    --surface:      #111827;
+    --card:         #162032;
+    --border:       #1e3050;
+    --accent:       #4f6ef7;
+    --accent-hover: #3a58e0;
+    --accent-dim:   rgba(79, 110, 247, 0.12);
+    --danger:       #ef4444;
+    --danger-hover: #dc2626;
+    --danger-dim:   rgba(239, 68, 68, 0.12);
+    --success:      #22c55e;
+    --warning:      #f59e0b;
+    --text:         #e8edf5;
+    --text-muted:   #7a8fad;
+    --text-dim:     #4a6080;
+    --radius-sm:    6px;
+    --radius:       10px;
+    --radius-lg:    14px;
+    --shadow:       0 4px 24px rgba(0, 0, 0, 0.4);
+    --shadow-sm:    0 2px 8px rgba(0, 0, 0, 0.25);
+    --font:         'Inter', 'Segoe UI', system-ui, sans-serif;
+    --mono:         'JetBrains Mono', 'Fira Code', monospace;
+    --transition:   0.18s ease;
+}
+
+html {
+    font-size: 15px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font);
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: color var(--transition), opacity var(--transition);
+}
+
+a:hover { color: var(--accent-hover); }
+
+/* ── Typography helpers ───────────────────────────────────── */
+h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 1.4rem;
+}
+
+h2 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+h3 {
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+/* ── Feedback messages ────────────────────────────────────── */
+.msg-error,
+p[style*="color:red"] {
+    background: var(--danger-dim);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    padding: 0.65rem 1rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 1.2rem;
+    font-size: 0.88rem;
+}
+
+.msg-success,
+p[style*="color:green"] {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    color: #86efac;
+    padding: 0.65rem 1rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 1.2rem;
+    font-size: 0.88rem;
+}
+
+/* ── Navbar ───────────────────────────────────────────────── */
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 56px;
+    background: rgba(11, 18, 32, 0.9);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+}
+
+.navbar-brand {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+}
+
+.navbar-brand::before {
+    content: '📦 IMS';
+}
+
+.navbar-links {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.nav-link {
+    padding: 0.35rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    transition: background var(--transition), color var(--transition);
+}
+
+.nav-link:hover,
+.nav-link.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+}
+
+.nav-link.btn {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.nav-link.btn:hover {
+    background: var(--accent-hover);
+    color: #fff;
+}
+
+/* ── User badge (navbar) ──────────────────────────────────── */
+.user-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: 0.75rem;
+    padding: 0.3rem 0.7rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.user-icon { font-size: 1rem; }
+
+.role-tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+}
+
+.role-tag.role-admin {
+    background: rgba(79, 110, 247, 0.18);
+    color: #818cf8;
+}
+
+.role-tag.role-staff {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
+/* ── Page container ───────────────────────────────────────── */
+.container {
+    max-width: 1100px;
+    margin: 2.5rem auto;
+    padding: 0 1.5rem;
+}
+
+/* ── Stats row ────────────────────────────────────────────── */
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.8rem;
+}
+
+.stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.15rem 1.4rem;
+    transition: border-color var(--transition);
+}
+
+.stat-card:hover { border-color: var(--accent); }
+
+.stat-card h3 {
+    margin-bottom: 0.5rem;
+}
+
+.stat-card p {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+
+/* ── Toolbar / Filters ────────────────────────────────────── */
+.toolbar {
+    margin-bottom: 1.2rem;
+}
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+}
+
+.filters input[type="text"],
+.filters select {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 0.5rem 0.85rem;
+    font-size: 0.88rem;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color var(--transition);
+}
+
+.filters input[type="text"]:focus,
+.filters select:focus {
+    border-color: var(--accent);
+}
+
+.filters select option { background: var(--surface); }
+
+.filters button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1.1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+.filters button:hover { background: var(--accent-hover); }
+
+.filters a {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    transition: border-color var(--transition), color var(--transition);
+}
+
+.filters a:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Table ────────────────────────────────────────────────── */
+.table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+thead {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+td {
+    padding: 0.8rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+    color: var(--text);
+}
+
+tbody tr:last-child td { border-bottom: none; }
+
+tbody tr { transition: background var(--transition); }
+tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
+
+td.price {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--success);
+    font-weight: 600;
+}
+
+td.stock { font-weight: 600; }
+
+td.stock.low-stock { color: var(--warning); }
+
+td.date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    background: var(--accent-dim);
+    color: #818cf8;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.no-access { color: var(--text-dim); }
+
+.number-col { text-align: right; }
+
+/* ── Table action links ───────────────────────────────────── */
+.td-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.link-edit,
+.link-delete {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.25rem 0.65rem;
+    border-radius: var(--radius-sm);
+    transition: background var(--transition), color var(--transition);
+}
+
+.link-edit {
+    background: var(--accent-dim);
+    color: var(--accent);
+}
+
+.link-edit:hover {
+    background: var(--accent);
+    color: #fff;
+}
+
+.link-delete {
+    background: var(--danger-dim);
+    color: var(--danger);
+}
+
+.link-delete:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
+/* ── Report section heading ───────────────────────────────── */
+.section-heading {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 2rem 0 0.9rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.table-section { margin-bottom: 2.5rem; }
+
+.category-name { font-weight: 600; color: var(--text); }
+
+.supplier-name { font-weight: 500; color: var(--text); }
+
+.no-data {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 2rem !important;
+    font-style: italic;
+}
+
+/* ── Forms (add, edit, register) ─────────────────────────── */
+.container form {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 560px;
+}
+
+.container form label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-top: 1.1rem;
+    margin-bottom: 0.4rem;
+}
+
+.container form label:first-of-type { margin-top: 0; }
+
+.container form input[type="text"],
+.container form input[type="email"],
+.container form input[type="password"],
+.container form input[type="number"],
+.container form select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.9rem;
+    font-size: 0.92rem;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.container form select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a8fad' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    padding-right: 2rem;
+}
+
+.container form select option { background: var(--surface); }
+
+.container form input:focus,
+.container form select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.18);
+}
+
+.container form input::placeholder { color: var(--text-dim); }
+
+/* nested select inside label (edit.php pattern) */
+.container form label select {
+    margin-top: 0.4rem;
+}
+
+/* ── Form buttons ─────────────────────────────────────────── */
+.container form button[type="submit"] {
+    margin-top: 1.6rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.7rem 1.4rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition), transform var(--transition);
+    align-self: flex-start;
+}
+
+.container form button[type="submit"]:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.container form button[type="submit"]:active { transform: translateY(0); }
+
+.container form a.cancel,
+.container form a.login {
+    display: inline-block;
+    margin-top: 1.6rem;
+    margin-left: 0.75rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    padding: 0.65rem 0.9rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    font-weight: 500;
+    transition: border-color var(--transition), color var(--transition);
+}
+
+.container form a.cancel:hover,
+.container form a.login:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* register.php br+br spacer override */
+.container form br { display: none; }
+
+/* ── Delete page ──────────────────────────────────────────── */
+.container p { color: var(--text-muted); margin-bottom: 0.5rem; }
+
+.container p.name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+}
+
+.container p.details {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+}
+
+.container p.warning {
+    font-size: 0.85rem;
+    color: var(--danger);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+.btn-delete {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 1.3rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+.btn-delete:hover { background: var(--danger-hover); }
+
+.btn-cancel {
+    display: inline-block;
+    margin-left: 0.75rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    padding: 0.6rem 0.9rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    font-weight: 500;
+    transition: border-color var(--transition), color var(--transition);
+}
+
+.btn-cancel:hover { border-color: var(--accent); color: var(--accent); }
+
+/* delete.php form has inline style — reset it */
+.container > form[style] {
+    background: none;
+    border: none;
+    padding: 0;
+    display: inline;
+}
+
+/* ── Login page ───────────────────────────────────────────── */
+.wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    gap: 1.5rem;
+}
+
+.brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+}
+
+.brand-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    box-shadow: 0 0 24px rgba(79, 110, 247, 0.4);
+}
+
+.brand-icon::before { content: '📦'; }
+
+.brand h1 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 0;
+    margin: 0;
+}
+
+.card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow);
+}
+
+/* Login form inside .card — override .container form rules */
+.card form {
+    background: none;
+    border: none;
+    padding: 0;
+    gap: 0;
+    max-width: none;
+}
+
+.error-banner {
+    background: var(--danger-dim);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    padding: 0.65rem 1rem;
+    border-radius: var(--radius-sm);
+    margin-bottom: 1.2rem;
+    font-size: 0.88rem;
+}
+
+.field {
+    margin-bottom: 1rem;
+}
+
+.field label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    margin-top: 0;
+}
+
+.input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 0.9rem;
+    font-size: 0.92rem;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.input-wrap input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.18);
+}
+
+.input-wrap input.has-error { border-color: var(--danger); }
+
+.input-wrap input::placeholder { color: var(--text-dim); }
+
+.toggle-pw {
+    position: absolute;
+    right: 0.65rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 0.2rem;
+    transition: color var(--transition);
+}
+
+.toggle-pw:hover { color: var(--accent); }
+.toggle-pw::before { content: '👁'; }
+
+.btn-login {
+    width: 100%;
+    margin-top: 1.4rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.75rem;
+    font-size: 0.97rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: background var(--transition), transform var(--transition);
+}
+
+.btn-login:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+/* ── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+    .navbar { padding: 0 1rem; }
+    .navbar-links { gap: 0; flex-wrap: wrap; }
+    .container { margin: 1.5rem auto; padding: 0 1rem; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .container form { padding: 1.4rem; }
+    .card { padding: 1.5rem; }
+    h1 { font-size: 1.3rem; }
+}
+
+@media (max-width: 480px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    .filters { flex-direction: column; align-items: stretch; }
+    .filters input[type="text"],
+    .filters select { width: 100%; }
+}
