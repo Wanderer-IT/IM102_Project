@@ -1,189 +1,103 @@
 <?php
 require_once 'config.php';
 require_once 'auth.php';
-
 requireAdmin();
 
 $message = '';
 
-// ── DELETE ──────────────────────────────────────────────────────────────────
-if (isset($_GET['action']) && $_GET['action'] === 'delete') {
-    $del_id = (int)($_GET['id'] ?? 0);
+if (isset($_GET['created'])) {
+    $message = '<p class="success">Staff account created.</p>';
+}
 
-    // prevent admin from deleting themselves
-    if ($del_id === (int)$_SESSION['user_id']) {
-        $message = '<p style="color:red;">You cannot delete your own account.</p>';
-    } elseif ($del_id > 0) {
-        $stmt = $conn->prepare("DELETE FROM users WHERE user_ID = ? AND role = 'staff'");
-        $stmt->bind_param("i", $del_id);
-        $stmt->execute();
-        $stmt->close();
-        header('Location: users.php?deleted=1');
+// Actual removal only happens on a confirmed POST (and never for your own account).
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_remove_id'])) {
+    $id = (int)$_POST['confirm_remove_id'];
+
+    if ($id === (int)$_SESSION['user_id']) {
+        $message = '<p class="error">You cannot remove your own account while logged in.</p>';
+    } else {
+        $conn->query("DELETE FROM users WHERE id = $id");
+        header('Location: users.php');
         exit;
     }
 }
 
-if (isset($_GET['deleted'])) {
-    $message = '<p style="color:green;">Staff account deleted.</p>';
-}
-
-// ── EDIT (inline form) ──────────────────────────────────────────────────────
-$edit_user = null;
-if (isset($_GET['action']) && $_GET['action'] === 'edit') {
-    $edit_id = (int)($_GET['id'] ?? 0);
-    $stmt = $conn->prepare("SELECT user_ID, userName, email, role FROM users WHERE user_ID = ? AND role = 'staff'");
-    $stmt->bind_param("i", $edit_id);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    $edit_user = $res ? $res->fetch_assoc() : null;
-    $stmt->close();
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
-    $uid      = (int)($_POST['user_ID'] ?? 0);
-    $uname    = trim($_POST['userName'] ?? '');
-    $email    = trim($_POST['email'] ?? '');
-    $new_pass = $_POST['new_password'] ?? '';
-
-    if ($uname === '' || $email === '') {
-        $message = '<p style="color:red;">Username and email are required.</p>';
-    } elseif ($new_pass !== '' && strlen($new_pass) < 6) {
-        $message = '<p style="color:red;">Password must be at least 6 characters.</p>';
+// A GET with ?remove=id only shows a confirmation prompt - nothing is removed yet.
+$pendingRemove = null;
+if (isset($_GET['remove'])) {
+    $remId = (int)$_GET['remove'];
+    if ($remId === (int)$_SESSION['user_id']) {
+        $message = '<p class="error">You cannot remove your own account while logged in.</p>';
     } else {
-        // check duplicate username/email (exclude self)
-        $dupStmt = $conn->prepare("SELECT user_ID FROM users WHERE (userName = ? OR email = ?) AND user_ID != ?");
-        $dupStmt->bind_param("ssi", $uname, $email, $uid);
-        $dupStmt->execute();
-        $dup = $dupStmt->get_result();
-
-        if ($dup && $dup->num_rows > 0) {
-            $message = '<p style="color:red;">Username or email already taken.</p>';
-        } else {
-            if ($new_pass !== '') {
-                $hash = password_hash($new_pass, PASSWORD_DEFAULT);
-                $stmt = $conn->prepare("UPDATE users SET userName = ?, email = ?, password_hash = ? WHERE user_ID = ? AND role = 'staff'");
-                $stmt->bind_param("sssi", $uname, $email, $hash, $uid);
-            } else {
-                $stmt = $conn->prepare("UPDATE users SET userName = ?, email = ? WHERE user_ID = ? AND role = 'staff'");
-                $stmt->bind_param("ssi", $uname, $email, $uid);
-            }
-
-            if ($stmt->execute()) {
-                header('Location: users.php?updated=1');
-                exit;
-            } else {
-                $message = '<p style="color:red;">Error: ' . $stmt->error . '</p>';
-            }
-            $stmt->close();
-        }
-        $dupStmt->close();
+        $pendingRemove = $conn->query("SELECT id, username FROM users WHERE id = $remId")->fetch_assoc();
     }
 }
 
-if (isset($_GET['updated'])) {
-    $message = '<p style="color:green;">Staff account updated.</p>';
-}
+$sql = "SELECT u.*, COUNT(p.id) AS product_count
+        FROM users u
+        LEFT JOIN products p ON u.id = p.added_by
+        GROUP BY u.id
+        ORDER BY u.created_at ASC";
 
-// ── FETCH ALL STAFF ──────────────────────────────────────────────────────────
-$staff = $conn->query("SELECT user_ID, userName, email, role, created_At FROM users WHERE role = 'staff' ORDER BY created_At DESC");
+$users = $conn->query($sql);
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Staff</title>
+    <title>Manage Staff - Tindahan Store System</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <?php include 'navbar.php'; ?>
 
-    <nav class="navbar">
-        <a href="index.php" class="navbar-brand">
-        </a>
-        <div class="navbar-links">
-            <a href="index.php" class="nav-link active">Products</a>
-            <a href="report.php" class="nav-link">View Report</a>
-            <?php if (isAdmin()): ?>
-            <a href="add.php" class="nav-link btn">+ Add Product</a>
-            <a href="users.php" class="nav-link">Manage Staff</a>
-            <?php endif; ?>
-            <span class="user-badge">
-                <span class="user-icon">&#128100;</span>
-                <?= htmlspecialchars(getUsername()) ?>
-                <span class="role-tag role-<?= htmlspecialchars(getRole()) ?>"><?= htmlspecialchars(ucfirst(getRole())) ?></span>
-            </span>
-            <a href="logout.php" class="nav-link">Logout</a>
-        </div>
-    </nav>
+    <div class="container">
+        <h1>Manage Staff</h1>
 
-<div class="container">
+        <?= $message ?>
 
-    <h1>Manage Staff</h1>
+        <?php if ($pendingRemove): ?>
+            <div class="credits-card" style="border-left:5px solid #d9534f; margin-bottom:20px;">
+                <p>Remove account "<strong><?= htmlspecialchars($pendingRemove['username']) ?></strong>"? This cannot be undone.</p>
+                <form method="POST">
+                    <input type="hidden" name="confirm_remove_id" value="<?= $pendingRemove['id'] ?>">
+                    <button type="submit" class="btn-danger">Yes, Remove</button>
+                    <a href="users.php" class="cancel">Cancel</a>
+                </form>
+            </div>
+        <?php endif; ?>
 
-    <?= $message ?>
+        <p><a href="register.php" class="btn">+ Add Staff</a></p>
 
-    <?php if ($edit_user): ?>
-    <!-- ── Edit form ── -->
-    <div class="card" style="margin-bottom:1.5rem; padding:1.25rem; border:1px solid #e2e8f0; border-radius:8px;">
-        <h2 style="margin-bottom:1rem;">Edit Staff: <?= htmlspecialchars($edit_user['userName']) ?></h2>
-        <form method="POST">
-            <input type="hidden" name="user_ID" value="<?= $edit_user['user_ID'] ?>">
-            <input type="hidden" name="update_user" value="1">
-
-            <label>Username</label>
-            <input type="text" name="userName" value="<?= htmlspecialchars($edit_user['userName']) ?>" required>
-
-            <label>Email</label>
-            <input type="email" name="email" value="<?= htmlspecialchars($edit_user['email']) ?>" required>
-
-            <label>New Password <small style="color:#888;">(leave blank to keep current)</small></label>
-            <input type="password" name="new_password" placeholder="Enter new password">
-
-            <button type="submit">Save Changes</button>
-            <a href="users.php" class="cancel">Cancel</a>
-        </form>
-    </div>
-    <?php endif; ?>
-
-    <!-- ── Staff table ── -->
-    <div class="table-wrap">
         <table>
-            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Products Added</th>
+                <th>Joined</th>
+                <th>Actions</th>
+            </tr>
+            <?php while ($u = $users->fetch_assoc()): ?>
                 <tr>
-                    <th>#</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Date Registered</th>
-                    <th>Actions</th>
+                    <td><?= $u['id'] ?></td>
+                    <td><?= htmlspecialchars($u['username']) ?></td>
+                    <td><?= htmlspecialchars($u['email']) ?></td>
+                    <td><span class="badge <?= $u['role'] === 'admin' ? 'badge-admin' : 'badge-staff' ?>"><?= htmlspecialchars($u['role']) ?></span></td>
+                    <td><?= $u['product_count'] ?></td>
+                    <td><?= $u['created_at'] ?></td>
+                    <td class="actions">
+                        <?php if ((int)$u['id'] !== (int)$_SESSION['user_id']): ?>
+                            <a href="users.php?remove=<?= $u['id'] ?>">Remove</a>
+                        <?php else: ?>
+                            <span style="color:#aaa;">(you)</span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
-            </thead>
-            <tbody>
-                <?php if ($staff && $staff->num_rows > 0): ?>
-                    <?php while ($u = $staff->fetch_assoc()): ?>
-                        <tr>
-                            <td><?= $u['user_ID'] ?></td>
-                            <td><?= htmlspecialchars($u['userName']) ?></td>
-                            <td><?= htmlspecialchars($u['email']) ?></td>
-                            <td><span class="badge"><?= ucfirst($u['role']) ?></span></td>
-                            <td class="date"><?= htmlspecialchars($u['created_At'] ?? '—') ?></td>
-                            <td>
-                                <div class="td-actions">
-                                    <a href="users.php?action=edit&id=<?= $u['user_ID'] ?>" class="link-edit">Edit</a>
-                                    <a href="users.php?action=delete&id=<?= $u['user_ID'] ?>"
-                                       class="link-delete"
-                                       onclick="return confirm('Delete <?= htmlspecialchars($u['userName']) ?>? This cannot be undone.')">Delete</a>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                <?php else: ?>
-                    <tr><td colspan="6" class="no-data">No staff accounts found.</td></tr>
-                <?php endif; ?>
-            </tbody>
+            <?php endwhile; ?>
         </table>
-    </div>
 
-</div>
+        <p class="count">Total: <?= $users->num_rows ?> user(s)</p>
+    </div>
 </body>
 </html>

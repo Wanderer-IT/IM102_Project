@@ -1,93 +1,116 @@
 <?php
 require_once 'config.php';
+require_once 'auth.php';
+requireAdmin();
 
-$message = '';
+$errors = [];
+$username = '';
+$email = '';
+$role = 'staff';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
+    $role = ($_POST['role'] ?? '') === 'admin' ? 'admin' : 'staff';
 
-    $Name        = trim($_POST['userName'] ?? '');
-    $Email       = trim($_POST['email'] ?? '');
-    $Password    = $_POST['password'] ?? '';
-    $ConfirmPass = $_POST['confirm_password'] ?? '';
-    $role        = 'staff'; // always staff on self-registration
+    // Validate empty fields
+    if (empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
+        $errors[] = 'All fields are required.';
+    }
 
-    if (empty($Name) || empty($Email) || empty($Password) || empty($ConfirmPass)) {
-        $message = '<p style="color:red;">All fields are required.</p>';
+    if (strlen($username) < 3) {
+        $errors[] = 'Username must be at least 3 characters long.';
+    }
 
-    } elseif (!filter_var($Email, FILTER_VALIDATE_EMAIL)) {
-        $message = '<p style="color:red;">Invalid email format.</p>';
+    // Validate email format
+    if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'Please enter a valid email address.';
+    }
 
-    } elseif (strlen($Password) < 6) {
-        $message = '<p style="color:red;">Password must be at least 6 characters long.</p>';
+    // Validate password length
+    if (strlen($password) < 6) {
+        $errors[] = 'Password must be at least 6 characters long.';
+    }
 
-    } elseif ($Password !== $ConfirmPass) {
-        $message = '<p style="color:red;">Passwords do not match.</p>';
+    // Validate password match
+    if ($password !== $confirm_password) {
+        $errors[] = 'Password and Confirm Password do not match.';
+    }
 
-    } else {
-        $checkStmt = $conn->prepare("SELECT user_ID FROM users WHERE userName = ? OR email = ?");
-        $checkStmt->bind_param("ss", $Name, $Email);
-        $checkStmt->execute();
-        $check = $checkStmt->get_result();
+    // Check if username or email already exists
+    if (empty($errors)) {
+        $safe_username = $conn->real_escape_string($username);
+        $safe_email = $conn->real_escape_string($email);
 
-        if ($check && $check->num_rows > 0) {
-            $message = '<p style="color:red;">Username or Email already exists.</p>';
-        } else {
-            $password_hash = password_hash($Password, PASSWORD_DEFAULT);
+        $check = $conn->query("SELECT id FROM users WHERE username = '$safe_username' OR email = '$safe_email'");
 
-            $stmt = $conn->prepare("INSERT INTO users (userName, email, password_hash, role) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("ssss", $Name, $Email, $password_hash, $role);
-
-            if ($stmt->execute()) {
-                $message = '<p style="color:green;">Account created! <a href="login.php">Sign in</a></p>';
-            } else {
-                $message = '<p style="color:red;">Error: ' . $stmt->error . '</p>';
-            }
-            $stmt->close();
+        if ($check->num_rows > 0) {
+            $errors[] = 'That username or email is already registered.';
         }
-        $checkStmt->close();
+    }
+
+    // If everything passes, hash the password and insert
+    if (empty($errors)) {
+        $hashed = password_hash($password, PASSWORD_DEFAULT);
+        $safe_username = $conn->real_escape_string($username);
+        $safe_email = $conn->real_escape_string($email);
+
+        $sql = "INSERT INTO users (username, email, password_hash, role) VALUES ('$safe_username', '$safe_email', '$hashed', '$role')";
+
+        if ($conn->query($sql)) {
+            header('Location: users.php?created=1');
+            exit;
+        } else {
+            $errors[] = 'Error: ' . $conn->error;
+        }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Create New User</title>
+    <title>Add Staff - Tindahan Store System</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <?php include 'navbar.php'; ?>
 
-<div class="container">
+    <div class="container" style="max-width:500px;">
+        <h1>Add New Staff Account</h1>
+        <p style="color:#666;">Only admins can create new accounts. Choose a role below.</p>
 
-    <h1>Create New Account</h1>
-    <p style="color:#666; margin-bottom:1rem;">New accounts are registered as <strong>Staff</strong>.</p>
+        <?php if (!empty($errors)): ?>
+            <ul class="error">
+                <?php foreach ($errors as $err): ?>
+                    <li><?= htmlspecialchars($err) ?></li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
 
-    <?= $message ?>
+        <form method="POST">
+            <label>Username</label>
+            <input type="text" name="username" required value="<?= htmlspecialchars($username) ?>" placeholder="e.g. jrosales">
 
-    <form method="POST">
+            <label>Email</label>
+            <input type="email" name="email" required value="<?= htmlspecialchars($email) ?>" placeholder="e.g. juan@email.com">
 
-        <label>Username</label>
-        <input type="text" name="userName" required placeholder="Enter your username"
-            value="<?= htmlspecialchars($_POST['userName'] ?? '') ?>">
+            <label>Password</label>
+            <input type="password" name="password" required placeholder="At least 6 characters">
 
-        <label>Email</label>
-        <input type="email" name="email" required placeholder="Enter your email"
-            value="<?= htmlspecialchars($_POST['email'] ?? '') ?>">
+            <label>Confirm Password</label>
+            <input type="password" name="confirm_password" required placeholder="Re-type password">
 
-        <label>Password</label>
-        <input type="password" name="password" required placeholder="Minimum 6 characters">
+            <label>Role</label>
+            <select name="role">
+                <option value="staff" <?= $role === 'staff' ? 'selected' : '' ?>>Staff</option>
+                <option value="admin" <?= $role === 'admin' ? 'selected' : '' ?>>Admin</option>
+            </select>
 
-        <label>Confirm Password</label>
-        <input type="password" name="confirm_password" required placeholder="Re-enter password">
-
-        <br>
-
-        <button type="submit">Register</button>
-        <a href="login.php" class="login">Back to Login</a>
-
-    </form>
-
-</div>
-
+            <button type="submit">Create Account</button>
+            <a href="users.php" class="cancel">Cancel</a>
+        </form>
+    </div>
 </body>
 </html>

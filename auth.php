@@ -1,17 +1,15 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-function requireLogin() {
-    if (!isset($_SESSION['user_id'])) {
-        header('Location: login.php');
-        exit;
-    }
-}
+session_start();
 
 function isLoggedIn() {
     return isset($_SESSION['user_id']);
+}
+
+function requireLogin() {
+    if (!isLoggedIn()) {
+        header('Location: login.php');
+        exit;
+    }
 }
 
 function isAdmin() {
@@ -19,18 +17,13 @@ function isAdmin() {
 }
 
 function requireAdmin() {
-    requireLogin(); // must be logged in first
+    requireLogin();
     if (!isAdmin()) {
-        header('Location: index.php');
-        exit;
+        die('Access denied. This page is for admins only.');
     }
 }
 
 function getUsername() {
-    return $_SESSION["username"] ?? "";
-}
-
-function getRole() {
-    return $_SESSION["role"] ?? "";
+    return isset($_SESSION['username']) ? $_SESSION['username'] : '';
 }
 ?>
